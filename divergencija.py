@@ -11,7 +11,6 @@ import plotly.express as px
 from sklearn.preprocessing import normalize
 from numpy.linalg import norm
 from sentence_transformers import SentenceTransformer
-from sklearn.manifold import TSNE
 
 # --- Ignoriši upozorenja ---
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -43,6 +42,8 @@ if 'pca_components' not in st.session_state:
     st.session_state.pca_components = []
 if 'dist_matrix' not in st.session_state:
     st.session_state.dist_matrix = []
+if 'pairwise_distances' not in st.session_state:
+    st.session_state.pairwise_distances = []
 
 # --- Učitavanje modela---
 @st.cache_resource
@@ -116,13 +117,13 @@ def calculate_avg_cosine_distance(embeddings):
         n = dist_matrix.shape[0]
         upper_triangle_indices = np.triu_indices(n, k=1)
         pairwise_distances = dist_matrix[upper_triangle_indices]
-        avg = np.mean(pairwise_distances) if pairwise_distances.size > 0 else 0.0
+        avg_cos_dist = np.mean(pairwise_distances) if pairwise_distances.size > 0 else 0.0
         norms = norm(embeddings, axis=1)
         normalized_norms = norm(normalize(embeddings),axis=1)
         print("---------------Norme po vektoru--------------- /n", norms)
         print("---------------Matrica distanci embedinga--------------- /n", dist_matrix)
 
-        return avg,dist_matrix, None
+        return avg_cos_dist,dist_matrix,pairwise_distances, None
     except Exception as e:
         return None, f"Greška kod kosinusne udaljenosti: {e}"
 
@@ -177,17 +178,17 @@ else:
                     
                     # Kosinusna udaljenost
                     with st.spinner("Računanje kosinusne udaljenosti..."):
-                        st.session_state.avg_cos_dist,st.session_state.dist_matrix, cos_err = calculate_avg_cosine_distance(st.session_state.word_embeddings)
+                        st.session_state.avg_cos_dist,st.session_state.dist_matrix,st.session_state.pairwise_distances, cos_err = calculate_avg_cosine_distance(st.session_state.word_embeddings)
                     
                     # Prikaz metrika
                     col1, col2, col3 = st.columns(3)
 
                     with col1:
-                        if st.session_state.pca_error_msg:
-                            st.error(f"PCA: {st.session_state.pca_error_msg}", icon=":material/error:")
-                        elif st.session_state.explained_variances is not None:
-                            st.metric(label="Ukupna varijansa (PCA)", value=f"{st.session_state.total_variance:.4f}")
-                            st.caption("Veća vrednost ≈ veći ukupan 'spread' podataka.")
+                        if cos_err:
+                            st.error(f"Kosinus: {cos_err}", icon=":material/error:")
+                        elif st.session_state.pairwise_distances is not None:
+                            st.metric(label="Prosečna cos udaljenost", value=f"{st.session_state.avg_cos_dist:.4f}")
+                            st.caption("Veća vrednost ≈ veća prosečna semantička različitost.")
 
                     with col2:
                         if cos_err:
@@ -275,113 +276,6 @@ else:
                     mime='text/csv'
                 )
 
-
-
-            # --- t-SNE Vizuelizacija ---
-            st.divider()
-            st.subheader("3D t-SNE projekcija semantičkih odnosa")
-
-            # Parametri
-            col1, col2 = st.columns(2)
-            with col1:
-                perplexity = st.slider(
-                    "Perplexity",
-                    min_value=2,
-                    max_value=max(5, len(st.session_state.words)-1),
-                    value=min(5, len(st.session_state.words)-1),
-                    key="tsne_perplexity_3d"
-                )
-            with col2:
-                learning_rate = st.slider(
-                    "Learning Rate",
-                    min_value=10,
-                    max_value=1000,
-                    value=200,
-                    key="tsne_lr_3d"
-                )
-
-            # Izračunavanje
-            if st.session_state.word_embeddings is not None and len(st.session_state.words) > 2:
-                try:
-                    tsne = TSNE(
-                        n_components=3,  # 3 komponente za 3D prikaz
-                        perplexity=perplexity,
-                        learning_rate=learning_rate,
-                        random_state=42,
-                        init='pca'
-                    )
-                    
-                    with st.spinner('Izračunavam 3D t-SNE projekciju...'):
-                        tsne_results = tsne.fit_transform(st.session_state.word_embeddings)
-                    
-                    # Priprema podataka
-                    tsne_df = pd.DataFrame({
-                        'Reč': st.session_state.words,
-                        't-SNE X': tsne_results[:, 0],
-                        't-SNE Y': tsne_results[:, 1],
-                        't-SNE Z': tsne_results[:, 2]
-                    })
-                    
-                    # Kreiranje "clean" 3D scatter plota bez vizuelnih elemenata
-                    fig_3d = px.scatter_3d(
-                        tsne_df,
-                        x='t-SNE X',
-                        y='t-SNE Y',
-                        z='t-SNE Z',
-                        text='Reč',
-                        hover_name='Reč'
-                    )
-
-                    # Potpuno čisti izgled
-                    fig_3d.update_traces(
-                        marker=dict(
-                            size=1,          # (ne može biti 0)
-                            opacity=0,
-                            color='white'        
-                        ),
-                        textfont=dict(
-                            size=18,         # Povećajte font po potrebi
-                            color='firebrick'    # Boja teksta
-                        ),
-                        hovertemplate='%{hovertext}<extra></extra>'  # Sakrij dodatne hover informacije
-                    )
-
-                    fig_3d.update_layout(
-                        scene=dict(
-                            xaxis=dict(
-                                visible=False,  # Sakrij X osu
-                                showbackground=False,
-                                showticklabels=False
-                            ),
-                            yaxis=dict(
-                                visible=False,  # Sakrij Y osu
-                                showbackground=False,
-                                showticklabels=False
-                            ),
-                            zaxis=dict(
-                                visible=False,  # Sakrij Z osu
-                                showbackground=False,
-                                showticklabels=False
-                            ),
-                            bgcolor='rgba(0,0,0,0)'  # Providna pozadina
-                        ),
-                        paper_bgcolor='rgba(0,0,0,0)',  # Providna pozadina izvan grafikona
-                        margin=dict(l=0, r=0, b=0, t=0),
-                        showlegend=False
-                    )
-
-                    # Opciono: Centriranje teksta
-                    fig_3d.update_traces(textposition='middle center')
-
-                    st.plotly_chart(fig_3d, use_container_width=True)
-                    
-                except Exception as e:
-                    st.error(f"Greška pri 3D t-SNE analizi: {str(e)}")
-            else:
-                st.warning("Potrebno je najmanje 3 reči za 3D prikaz")
-
-
-
 # --- Dodatne Informacije ---
 st.sidebar.header("Info")
 st.sidebar.header("Model")
@@ -402,3 +296,10 @@ st.sidebar.markdown("""
 # Velika slova ignorise ali moram da sredim i osisanu latinicu koja vidno utice na rezultate.
 
 # bicikl ananas oblak skalamerija sočivo melanholija inicijali interpunkcija godišnjica kreda - 0.6495
+
+# tegla poklopac staklo turšija krastavčići krastavčić krastavac kiselo kupus čep - 0.4810
+
+# [theme]
+# base="dark"
+# primaryColor="#da5555"
+# secondaryBackgroundColor="#748ebd"
