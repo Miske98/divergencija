@@ -386,6 +386,8 @@ st.sidebar.markdown("""
 
 # tegla poklopac staklo turšija krastavčići krastavčić krastavac kiselo kupus čep - 0.4810
 
+# komentar dodatni
+
 # [theme]
 # base="dark"
 # primaryColor="#da5555"
