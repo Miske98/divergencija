@@ -7,4 +7,5 @@ pandas
 plotly
 sentence-transformers
 seaborn
+umap
 openai
