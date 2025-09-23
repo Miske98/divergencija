@@ -7,3 +7,4 @@ pandas
 plotly
 sentence-transformers
 seaborn
+openai

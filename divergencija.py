@@ -14,6 +14,7 @@ from sklearn.preprocessing import normalize
 from numpy.linalg import norm
 from sentence_transformers import SentenceTransformer
 import seaborn as sns
+import umap.umap_ as umap
 
 # --- Ignoriši upozorenja ---
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -231,6 +232,29 @@ else:
                         else:
                             st.info("Podaci o parnim udaljenostima još nisu dostupni.")
 
+                    # --- UMAP ---
+                    with st.expander("UMAP vizualizacija (2D projekcija)"):
+                        if len(st.session_state.word_embeddings) >= 2:
+                            reducer = umap.UMAP(n_neighbors=3, min_dist=0.15, metric='cosine', random_state=42)
+                            umap_embedding = reducer.fit_transform(st.session_state.word_embeddings)
+
+                            df_umap = pd.DataFrame(umap_embedding, columns=["UMAP1", "UMAP2"])
+                            df_umap["word"] = st.session_state.words
+
+                            fig_umap = px.scatter(
+                                df_umap,
+                                x="UMAP1",
+                                y="UMAP2",
+                                text="word",
+                                title="UMAP prikaz semantičkog prostora reči",
+                                width=800,
+                                height=600
+                            )
+                            fig_umap.update_traces(textposition='top center')
+                            fig_umap.update_layout(margin=dict(l=20, r=20, t=50, b=20))
+                            st.plotly_chart(fig_umap)
+                        else:
+                            st.info("Potrebno je uneti najmanje dve reči za UMAP vizualizaciju.")
 
                     # --- Histogram ---       
                     st.divider()
