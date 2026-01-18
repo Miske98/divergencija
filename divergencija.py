@@ -1,13 +1,17 @@
 import streamlit as st
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.decomposition import PCA
 from scipy.stats import hmean
+import scipy.cluster.hierarchy as sch  # <--- NOVI IMPORT ZA DENDROGRAM
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 import plotly.express as px
+import plotly.graph_objects as go
+import plotly.figure_factory as ff
 from openai import OpenAI
 
-# --- OpenAI klijent (API ključ preko Streamlit secrets ili placeholder) ---
+# --- OpenAI klijent ---
 client = OpenAI(api_key=st.secrets.get("openai", {}).get("api_key", "YOUR_OPENAI_API_KEY"))
 
 # --- Konfiguracija Stranice ---
@@ -45,8 +49,6 @@ def load_labse_model():
         return None
 
 labse_model = load_labse_model()
-if labse_model is not None:
-    st.sidebar.success("LaBSE model uspešno učitan.")
 
 # --- Embeding funkcije ---
 @st.cache_data(show_spinner=False)
@@ -115,11 +117,11 @@ st.session_state.embedder = st.radio(
 
 # --- Dinamička uputstva ---
 if st.session_state.input_type == "Reči":
-    st.markdown("Unesite tačno **10 reči** (poželjno imenica u nominativu jednine na srpskom jeziku).")
+    st.markdown("Unesite **10 reči** (poželjno imenica u nominativu jednine na srpskom jeziku).")
     expected_count = 10
     count_unit = "reči"
 else:
-    st.markdown("Unesite tačno **5 rečenica** na srpskom jeziku.")
+    st.markdown("Unesite **5 rečenica** na srpskom jeziku.")
     expected_count = 5
     count_unit = "rečenica"
 
@@ -142,9 +144,11 @@ if st.button("Analiza", type="primary", icon=":material/psychology_alt:"):
     st.session_state.pairwise_distances = None
     st.session_state.words = []
 
+    # Validacija unosa
     if not all(input_items):
         st.error(f"Molimo popunite sva {expected_count} polja.", icon=":material/error:")
     else:
+        # Čišćenje unosa
         if st.session_state.input_type == "Reči":
             st.session_state.words = [item.strip().lower() for item in input_items if item.strip()]
         else:
@@ -155,6 +159,7 @@ if st.button("Analiza", type="primary", icon=":material/psychology_alt:"):
         else:
             st.info(f"Unete {st.session_state.input_type}: {', '.join(st.session_state.words)}", icon=":material/psychology:")
 
+            # Generisanje embeddinga
             embeddings_error = False
             with st.spinner(f"Računanje embeddinga za {len(st.session_state.words)} {count_unit}..."):
                 if st.session_state.embedder == "LaBSE":
@@ -168,6 +173,7 @@ if st.button("Analiza", type="primary", icon=":material/psychology_alt:"):
                     st.error(f"Greška pri dobijanju embeddinga: {embed_error_msg}", icon=":material/error:")
                     embeddings_error = True
 
+            # Ako su embedinzi OK, nastavi
             if not embeddings_error:
                 st.divider()
                 st.subheader("Mere semantičke distance")
@@ -185,14 +191,15 @@ if st.button("Analiza", type="primary", icon=":material/psychology_alt:"):
                     with col3:
                         st.metric("Harmonijska udaljenost", f"{hmean(st.session_state.pairwise_distances.iloc[:,0]):.4f}")
 
-# --- Prikaz heatmap matrice ---
+# --- Glavni prikaz rezultata ---
 if (st.session_state.word_embeddings is not None and
     isinstance(st.session_state.dist_matrix, np.ndarray) and
     st.session_state.dist_matrix.shape[0] > 1 and
     len(st.session_state.words) == st.session_state.dist_matrix.shape[0]):
 
+    # 1. Heatmapa distance
     st.divider()
-    st.subheader("Matrica semantičke distance")
+    st.subheader(" Matrica semantičke distance")
     df_cos_sim = pd.DataFrame(
         st.session_state.dist_matrix,
         index=st.session_state.words,
@@ -217,3 +224,72 @@ if (st.session_state.word_embeddings is not None and
         file_name='semanticka_udaljenost_matrica.csv',
         mime='text/csv'
     )
+
+    # 2. PCA Analiza (Kumulativni varijabilitet)
+    st.divider()
+    st.subheader("PCA Analiza: Kumulativni varijabilitet")
+    
+    n_components = min(len(st.session_state.words), st.session_state.word_embeddings.shape[1])
+    pca = PCA(n_components=n_components)
+    pca.fit(st.session_state.word_embeddings)
+    
+    exp_var_cumul = np.cumsum(pca.explained_variance_ratio_)
+    
+    fig_pca = go.Figure()
+    fig_pca.add_trace(go.Scatter(
+        x=list(range(1, n_components + 1)),
+        y=exp_var_cumul,
+        mode='lines+markers',
+        name='Kumulativna varijansa',
+        line=dict(color='firebrick', width=2),
+        marker=dict(size=8)
+    ))
+    
+    fig_pca.add_trace(go.Bar(
+        x=list(range(1, n_components + 1)),
+        y=pca.explained_variance_ratio_,
+        name='Individualna varijansa',
+        marker_color='lightsalmon',
+        opacity=0.6
+    ))
+
+    fig_pca.update_layout(
+        title='Objašnjena varijansa po PCA komponentama',
+        xaxis_title='Broj komponenti',
+        yaxis_title='Udeo objašnjene varijanse (0-1)',
+        legend=dict(x=0.7, y=0.1),
+        template="plotly_white",
+        yaxis=dict(range=[0, 1.05])
+    )
+    st.plotly_chart(fig_pca, use_container_width=True)
+    
+    # 3. Hijerarhijska klasterizacija (Dendrogram)
+    st.divider()
+    st.subheader("Hijerarhijska klasterizacija")
+    
+    try:
+        # Definisanje linkage funkcije eksplicitno pomoću scipy
+        def custom_linkage(x):
+            return sch.linkage(x, method='ward', metric='euclidean')
+
+        fig_dendro = ff.create_dendrogram(
+            st.session_state.word_embeddings, 
+            labels=st.session_state.words,
+            orientation='left', 
+            linkagefun=custom_linkage 
+        )
+        
+        fig_dendro.update_layout(
+            title="Dendrogram sličnosti",
+            width=800,
+            height=600,
+            xaxis_title="Udaljenost",
+            yaxis_title="",
+            template="plotly_white"
+        )
+        
+        st.plotly_chart(fig_dendro, use_container_width=True)
+        st.caption("Reči povezane bliže levoj strani su semantički sličnije.")
+        
+    except Exception as e:
+        st.error(f"Došlo je do greške pri kreiranju dendograma: {e}")
