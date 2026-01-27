@@ -112,12 +112,52 @@ if "obj" in st.session_state:
     np.fill_diagonal(dist_m, 0)
 
     with col_s:
-        fig_s = go.Figure([go.Bar(y=ev_raw, name="Original", marker_color="lightgray"), go.Bar(y=ev_f, name="Filtrirano", marker_color="royalblue")])
-        colors = ["red", "orange", "green"]; names = ["RMT (MP)", "Gavish-Donoho", "Parallel Analysis"]
+        # 1. Osnovni stubići
+        fig_s = go.Figure([
+            go.Bar(y=ev_raw, name="Original", marker_color="lightgray", showlegend=True), 
+            go.Bar(y=ev_f, name="Filtrirano", marker_color="royalblue", showlegend=True)
+        ])
+        
+        # 2. Definisanje pragova
+        colors = ["red", "orange", "green"]
+        names = ["RMT (MP)", "Gavish-Donoho", "Parallel Analysis"]
+        
+        # 3. Dodavanje linija i legendi
         for t, c, nm in zip(threshs, colors, names):
-            fig_s.add_hline(y=t, line_dash="dash", line_color=c, annotation_text=nm)
-        fig_s.update_layout(height=300, margin=dict(t=20, b=20), yaxis_type="log", title=f"Scree Plot (Prepoznato signala: {signals})")
+            fig_s.add_hline(y=t, line_dash="dash", line_color=c)
+            # Dodajemo "dummy" trace za legendu
+            fig_s.add_trace(go.Scatter(
+                x=[None], y=[None],
+                mode='lines',
+                line=dict(color=c, dash='dash'),
+                name=nm
+            ))
+            
+        fig_s.update_layout(
+            height=300, 
+            margin=dict(t=50, b=20), 
+            yaxis_type="log", 
+            title=f"Scree Plot (Prepoznato signala: {signals})",
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.05,
+                xanchor="center",
+                x=0.5
+            ),
+            xaxis_title="Komponenta",
+            yaxis_title="Eigenvrednost (log)"
+        )
         st.plotly_chart(fig_s, use_container_width=True)
+
+        # 4. Numerička tabela za preciznost (ispod grafikona)
+        st.write("### 📏 Precizne vrednosti pragova")
+        thresh_data = {
+            "Metod": names,
+            "Vrednost praga": [f"{t:.4f}" for t in threshs],
+            "Status": ["Aktivno" if auto_method == n else "Samo vizuelno" for n in names]
+        }
+        st.table(pd.DataFrame(thresh_data))
 
     st.divider()
     res_c1, res_c2 = st.columns(2)
