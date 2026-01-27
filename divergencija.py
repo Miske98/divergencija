@@ -101,11 +101,30 @@ if "obj" in st.session_state:
         st.plotly_chart(px.imshow(pd.DataFrame(clean_c, index=d["words"], columns=d["words"]), text_auto=".2f", color_continuous_scale="RdBu_r", zmin=-1, zmax=1, title="Matrica sličnosti"), use_container_width=True)
     
     with res_col2:
+        st.subheader("Klasterizacija")
         try:
-            fig_d = ff.create_dendrogram(dist_m, labels=d["words"], orientation='left')
-            fig_d.update_layout(title="Hijerarhijski klasteri")
-            st.plotly_chart(fig_d, use_container_width=True)
-        except: st.warning("Dendrogram nedostupan za trenutni filter.")
+            # 1. Numeričko peglanje za stabilnost na Cloudu
+            dist_m_stable = (dist_m + dist_m.T) / 2
+            np.fill_diagonal(dist_m_stable, 0)
+        
+            # 2. Provera da li ima NaN vrednosti (zna da se desi kod agresivnog RMT-a)
+            if np.any(np.isnan(dist_m_stable)):
+                st.warning("Matrica sadrži nevalidne podatke. Smanjite intenzitet filtera.")
+            else:
+                # 3. Eksplicitno računanje linkage-a pre Plotly-ja
+                # Ovo pomaže da vidimo gde tačno greška nastaje
+                Z = sch.linkage(sch.distance.squareform(dist_m_stable), method='ward')
+            
+                fig_d = ff.create_dendrogram(
+                    dist_m_stable, 
+                    labels=d["words"], 
+                    orientation='left',
+                    linkagefun=lambda x: sch.linkage(x, method='ward')
+                )
+                fig_d.update_layout(title="Hijerarhijski klasteri", height=500)
+                st.plotly_chart(fig_d, use_container_width=True)
+        except Exception as e:
+            st.error(f"Greška u dendrogramu: {e}")
 
     
 
