@@ -50,7 +50,7 @@ def apply_manual_filter(embeddings, n_top, n_bottom):
     evals, evecs = evals[idx], evecs[:, idx]
     evals_filt = evals.copy()
     
-    # Samo ručno nuliranje (Skalpel)
+    # Samo ručno nuliranje
     if n_top > 0: evals_filt[:n_top] = 0
     if n_bottom > 0: evals_filt[max(0, len(evals)-n_bottom):] = 0
         
@@ -84,8 +84,8 @@ if "obj" in st.session_state:
     col_f, col_s = st.columns([1, 2])
     with col_f:
         st.subheader("🛠️ Ručni Skalpel")
-        c_top = st.slider("Ukloni najveće (Top-N)", 0, n-1, 1, help="Ukloni PC1 da pojačaš kontrast.")
-        c_bottom = st.slider("Ukloni najmanje (Bottom-N)", 0, n-1, 0, help="Gledaj zelenu liniju na grafiku za orijentaciju.")
+        c_top = st.slider("Ukloni najveće (Top-N)", 0, n-1, 1, help="Pojačava kontrast.")
+        c_bottom = st.slider("Ukloni najmanje (Bottom-N)", 0, n-1, 0, help="Izbacuju šum.")
         
     clean_c, ev_raw, ev_f = apply_manual_filter(d["emb"], c_top, c_bottom)
     
@@ -96,7 +96,7 @@ if "obj" in st.session_state:
     dist_m_s = np.nan_to_num(dist_m_s, nan=1.0, posinf=2.0, neginf=0.0)
 
     with col_s:
-        # Scree Plot sa vizuelnim granicama
+        # Scree Plot
         fig_s = go.Figure([
             go.Bar(y=ev_raw, name="Original", marker_color="lightgray"), 
             go.Bar(y=ev_f, name="Zadržano", marker_color="royalblue")
@@ -124,9 +124,9 @@ if "obj" in st.session_state:
         st.plotly_chart(px.imshow(pd.DataFrame(clean_c, index=d["words"], columns=d["words"]), 
                                   text_auto=".2f", color_continuous_scale="RdBu_r", zmin=-1, zmax=1, title="Fokusirana matrica sličnosti"), use_container_width=True)
     with res_c2:
-        st.subheader("🌳 Klasterizacija")
+        st.subheader("Klasterizacija")
         try:
-            # 1. Numeričko peglanje (Ovo je tvoj ključ uspeha)
+            # 1. Numeričko peglanje
             dist_m_stable = (dist_m + dist_m.T) / 2
             np.fill_diagonal(dist_m_stable, 0)
             
