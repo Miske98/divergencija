@@ -67,7 +67,8 @@ st.title(":rainbow[Semantički Objektiv]: Manuelna Spektroskopija")
 with st.sidebar:
     st.header("Konfiguracija")
     model_provider = st.selectbox("Model", ["LaBSE", "OpenAI 3-small", "OpenAI 3-large"])
-    input_raw = st.text_area("Unos podataka:", "Kralj\nKraljica\nMuškarac\nŽena\nJabuka\nKruška\nAvion\nAuto", height=250)
+    input_raw = st.text_area("Unos podataka:", "Kralj\nKraljica\nMuškarac\nŽena\nJabuka\nKruška\nAvion\nAuto\nVišnja\nParadajz\nHrana\nCilindar", height=250)
+    st.write(f"Napisali ste {input_raw.count('\n')} pojmova")
     analyze_btn = st.button("Analiziraj", type="primary", use_container_width=True)
 
 if analyze_btn and input_raw:
