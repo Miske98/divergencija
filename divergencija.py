@@ -116,7 +116,7 @@ if "obj" in st.session_state:
                             title="Spektar sa teorijskim granicama šuma")
         st.plotly_chart(fig_s, use_container_width=True)
 
-        st.table(pd.DataFrame({"Metod": names, "Vrednost praga": [f"{t:.4f}" for t in thresholds]}))
+        st.table(pd.DataFrame({"Metod": names, "Prag": [f"{t:.4f}" for t in thresholds]}),border="horizontal")
 
     st.divider()
     res_c1, res_c2 = st.columns(2)
