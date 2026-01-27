@@ -98,13 +98,13 @@ if "obj" in st.session_state:
     with col_s:
         # Scree Plot
         fig_s = go.Figure([
-            go.Bar(y=ev_raw, name="Original", marker_color="lightgray"), 
-            go.Bar(y=ev_f, name="Zadržano", marker_color="royalblue")
+            go.Bar(y=ev_raw, name="Original", marker_color="cornsilk"), 
+            go.Bar(y=ev_f, name="Zadržano", marker_color="coral")
         ])
         
         # Pragovi kao vizuelne linije
         thresholds = [l_max, gd_t, pa_t]
-        colors = ["red", "orange", "green"]
+        colors = ["crimson", "moccasin", "cornflowerblue"]
         names = ["RMT (MP) Limit", "Gavish-Donoho", "Parallel Analysis"]
         
         for t, c, nm in zip(thresholds, colors, names):
