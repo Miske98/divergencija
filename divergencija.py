@@ -124,8 +124,33 @@ if "obj" in st.session_state:
         st.plotly_chart(px.imshow(pd.DataFrame(clean_c, index=d["words"], columns=d["words"]), 
                                   text_auto=".2f", color_continuous_scale="RdBu_r", zmin=-1, zmax=1, title="Fokusirana matrica sličnosti"), use_container_width=True)
     with res_c2:
+        st.subheader("🌳 Klasterizacija")
         try:
-            fig_d = ff.create_dendrogram(dist_m_s, labels=d["words"], orientation='left', linkagefun=lambda x: sch.linkage(x, method='ward'))
-            fig_d.update_layout(title="Dendrogram (Ward linkage)")
-            st.plotly_chart(fig_d, use_container_width=True)
-        except Exception as e: st.warning(f"Dendrogram nije moguć sa trenutnim rezom: {e}")
+            # 1. Numeričko peglanje (Ovo je tvoj ključ uspeha)
+            dist_m_stable = (dist_m + dist_m.T) / 2
+            np.fill_diagonal(dist_m_stable, 0)
+            
+            # Zaštita od ekstremnih rezova skalpelom
+            if np.any(np.isnan(dist_m_stable)):
+                st.warning("Matrica sadrži nevalidne podatke. Smanjite intenzitet filtera.")
+            else:
+                # 2. squareform i linkage - eksplicitno
+                # squareform pretvara matricu u 'condensed' format koji linkage zahteva
+                condensed = sch.distance.squareform(dist_m_stable, checks=False)
+                Z = sch.linkage(condensed, method='ward')
+                
+                # 3. Iscrtavanje sa linkagefun parametrom
+                fig_d = ff.create_dendrogram(
+                    dist_m_stable, 
+                    labels=d["words"], 
+                    orientation='left',
+                    linkagefun=lambda x: sch.linkage(x, method='ward')
+                )
+                fig_d.update_layout(title="Hijerarhijski klasteri (Ward)", height=500)
+                st.plotly_chart(fig_d, use_container_width=True)
+                
+        except Exception as e:
+            # Ako i pored svega pukne, ispisujemo tačnu grešku radi debagovanja
+            st.error(f"Greška u dendrogramu: {e}")
+            if "infinity" in str(e).lower():
+                st.info("💡 Hint: Skalpel je uklonio previše komponenti. Vratite Bottom-N na nulu ili smanjite Top-N.")
