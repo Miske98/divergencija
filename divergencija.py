@@ -18,7 +18,7 @@ except ImportError:
     SKBIO_AVAILABLE = False
 
 # --- CONFIG ---
-st.set_page_config(page_title="Semantički Objektiv", layout="wide")
+st.set_page_config(page_title="Semantička analiza", layout="wide")
 client = OpenAI(api_key=st.secrets.get("openai", {}).get("api_key", "YOUR_OPENAI_API_KEY"))
 
 @st.cache_resource
@@ -65,19 +65,17 @@ def apply_range_filter(embeddings, range_start, range_end):
     return clean_corr, evals, evals_filt
 
 # --- UI HEADER & INPUTS ---
-st.title("🔎 Spektralna Analiza & PERMANOVA")
+st.title("Spektralna analiza")
 
 with st.sidebar:
-    st.header("Podešavanja Modela")
+    st.header("Podešavanja modela")
     model_provider = st.selectbox("Model embeddinga", ["LaBSE", "OpenAI 3-small", "OpenAI 3-large"])
 
-# 1. VELIKI INPUT (Leva strana) vs REZULTATI (Desna strana) je nepraktično za Flow.
-# Bolje: Input gore, Analiza dole.
     
 col_input, col_groups = st.columns([2, 1])
 
 with col_input:
-    st.subheader("1. Unos Teksta")
+    st.subheader("1. Unos teksta")
     input_raw = st.text_area(
         "Zalepi rečenice ovde (svaka u novom redu):", 
         height=300, # Veći textbox
@@ -85,7 +83,7 @@ with col_input:
     )
 
 with col_groups:
-    st.subheader("2. Definicija Grupa")
+    st.subheader("2. Definicija grupa")
     st.info("Opciono: Za statističke testove")
     group_input = st.text_area(
         "Broj rečenica po grupama:",
@@ -126,7 +124,7 @@ if "data" in st.session_state:
     col_vis_control, col_dendo = st.columns([4, 5])
     
     with col_vis_control:
-        st.subheader("Spektralni Filter")
+        st.subheader("Spektralni filter")
         
         # 1. RANGE SLIDER (Direktno kontroliše šta se vidi)
         # Default: Zadrži sve osim prve (ako je bias) i zadnje trećine
@@ -167,7 +165,7 @@ if "data" in st.session_state:
             yaxis_title="Karakteristična vrednost (Log)",
             xaxis_title="Indeks",
             showlegend=False,
-            title="Scree Plot (Plavo = Aktivno)"
+            title="Scree plot (Plavo = Aktivno)"
         )
         st.plotly_chart(fig_s, use_container_width=True)
         
@@ -176,7 +174,7 @@ if "data" in st.session_state:
         st.caption(f"Izolovano {kept_var:.1f}% varijabiliteta.")
 
         # Matrica sličnosti (manja, ispod kontrola)
-        st.subheader("Matrica Sličnosti")
+        st.subheader("Matrica sličnosti")
         st.plotly_chart(px.imshow(
             pd.DataFrame(clean_c, index=d["words"], columns=d["words"]), 
             color_continuous_scale="RdBu_r", 
@@ -216,7 +214,7 @@ if "data" in st.session_state:
     # --- PERMANOVA TABELA (SPSS STIL) ---
     if d["groups"] and SKBIO_AVAILABLE:
         st.divider()
-        st.subheader("ANOVA Tabela (PERMANOVA)")
+        st.subheader("ANOVA tabela (PERMANOVA)")
         
         try:
             # Parsiranje grupa
