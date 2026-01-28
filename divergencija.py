@@ -92,7 +92,7 @@ with col_groups:
         height=100,
         placeholder="Primer: 10, 15\n(Znači: prvih 10 je Grupa A, sledećih 15 je Grupa B)"
     )
-    analyze_btn = st.button("POKRENI ANALIZU 🚀", type="primary", use_container_width=True)
+    analyze_btn = st.button("Analiza", type="primary", use_container_width=True)
 
 # --- ANALIZA & RESULTS ---
 if analyze_btn and input_raw:
@@ -126,17 +126,17 @@ if "data" in st.session_state:
     col_vis_control, col_dendo = st.columns([4, 5])
     
     with col_vis_control:
-        st.subheader("🎛️ Spektralni Filter")
+        st.subheader("Spektralni Filter")
         
         # 1. RANGE SLIDER (Direktno kontroliše šta se vidi)
         # Default: Zadrži sve osim prve (ako je bias) i zadnje trećine
         sel_range = st.slider(
-            "Izaberite opseg eigen-vrednosti za zadržavanje:",
+            "Izaberite opseg karakterističnih vrednosti za zadržavanje:",
             min_value=0,
             max_value=n_samples - 1,
-            value=(1, n_samples - 1), # Default preskače nultu komponentu
+            value=(0, n_samples - 1),
             step=1,
-            help="Komponente unutar plavog opsega se koriste za rekonstrukciju. Ostale se brišu."
+            help="Vrednosti unutar opsega se koriste za rekonstrukciju. Ostale se brišu."
         )
         
         # Primena filtera
@@ -158,14 +158,14 @@ if "data" in st.session_state:
         ))
         
         # Gavish-Donoho linija (Samo ona)
-        fig_s.add_hline(y=gd_thresh, line_dash="dash", line_color="orange", annotation_text="Gavish-Donoho Prag", annotation_position="top right")
+        fig_s.add_hline(y=gd_thresh, line_dash="longdashdot", line_color="red", annotation_text="Gavish-Donoho Prag", annotation_position="top right")
         
         fig_s.update_layout(
             height=350,
             margin=dict(t=30, b=0, l=0, r=0),
             yaxis_type="log",
             yaxis_title="Karakteristična vrednost (Log)",
-            xaxis_title="Indeks Komponente",
+            xaxis_title="Indeks",
             showlegend=False,
             title="Scree Plot (Plavo = Aktivno)"
         )
