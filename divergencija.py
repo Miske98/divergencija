@@ -153,8 +153,8 @@ if "data" in st.session_state:
             y=ev_raw,
             marker_color=colors,
             name="Eigenvrednosti",
-            text=[f"PC{i}" for i in range(n_samples)],
-            hovertemplate="<b>%{text}</b><br>Vrednost: %{y:.3f}<extra></extra>"
+            text=[f"EV{i}" for i in range(n_samples)],
+            hovertemplate="<b>%{text}</b><br>Vrednost: %{y:.2f}<extra></extra>"
         ))
         
         # Gavish-Donoho linija (Samo ona)
@@ -164,7 +164,7 @@ if "data" in st.session_state:
             height=350,
             margin=dict(t=30, b=0, l=0, r=0),
             yaxis_type="log",
-            yaxis_title="Eigenvrednost (Log)",
+            yaxis_title="Karakteristična vrednost (Log)",
             xaxis_title="Indeks Komponente",
             showlegend=False,
             title="Scree Plot (Plavo = Aktivno)"
@@ -173,7 +173,7 @@ if "data" in st.session_state:
         
         # Info o zadržanoj energiji (opciono, ali korisno)
         kept_var = np.sum(ev_filt) / np.sum(ev_raw) * 100
-        st.caption(f"Zadržano {kept_var:.1f}% totalne varijanse.")
+        st.caption(f"Izolovano {kept_var:.1f}% varijabiliteta.")
 
         # Matrica sličnosti (manja, ispod kontrola)
         st.subheader("Matrica Sličnosti")
@@ -185,7 +185,7 @@ if "data" in st.session_state:
         ), use_container_width=True)
 
     with col_dendo:
-        st.subheader("🌳 Dendrogram (Stabilizovan)")
+        st.subheader("Dendrogram")
         
         # --- STABILNA MATEMATIKA ZA DENDROGRAM ---
         # 1. Distanca
@@ -216,7 +216,7 @@ if "data" in st.session_state:
     # --- PERMANOVA TABELA (SPSS STIL) ---
     if d["groups"] and SKBIO_AVAILABLE:
         st.divider()
-        st.subheader("📊 ANOVA Tabela (PERMANOVA)")
+        st.subheader("ANOVA Tabela (PERMANOVA)")
         
         try:
             # Parsiranje grupa
@@ -231,23 +231,23 @@ if "data" in st.session_state:
                 
                 # Izrada Tabele
                 df_stats = pd.DataFrame({
-                    "Izvor varijanse": ["Između Grupa (Model)", "Unutar Grupa (Rezidual)", "Ukupno"],
+                    "Izvor varijanse": ["Between (Model)", "Within (Rezidual)", "Total"],
                     "df": [len(g_counts)-1, n_samples-len(g_counts), n_samples-1],
                     "F": [f"{res['test statistic']:.3f}", "", ""],
                     "p": [f"{res['p-value']:.4f}", "", ""],
-                    "N Permutacija": [res['number of permutations'], "", ""]
+                    "N Permutation": [res['number of permutations'], "", ""]
                 })
                 
                 # Checkboxovi za custom prikaz
                 st.write("Prilagodi prikaz:")
                 cols = st.columns(4)
-                show_f = cols[0].checkbox("Prikaži F-odnos", True)
-                show_p = cols[1].checkbox("Prikaži p-vrednost", True)
+                show_f = cols[0].checkbox("Prikaži F", True)
+                show_p = cols[1].checkbox("Prikaži p", True)
                 
                 final_cols = ["Izvor varijanse", "df"]
                 if show_f: final_cols.append("F")
                 if show_p: final_cols.append("p")
-                final_cols.append("N Permutacija")
+                final_cols.append("N Permutation")
                 
                 st.table(df_stats[final_cols])
                 
