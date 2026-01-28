@@ -5,6 +5,7 @@ import scipy.linalg as la
 import scipy.cluster.hierarchy as sch
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
+import plotly.express as px
 import plotly.graph_objects as go
 import plotly.figure_factory as ff
 from openai import OpenAI
