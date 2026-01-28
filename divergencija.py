@@ -177,7 +177,7 @@ if "data" in st.session_state:
         # Matrica sličnosti (manja, ispod kontrola)
         st.subheader("Matrica Sličnosti")
         st.plotly_chart(px.imshow(
-            clean_c, 
+            pd.DataFrame(clean_c, index=d["words"], columns=d["words"]), 
             color_continuous_scale="RdBu_r", 
             zmin=-1, zmax=1,
             labels=dict(x="", y="")
